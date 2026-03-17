@@ -319,8 +319,12 @@ def find_all_matches_in_seq(
     orientation_label: str,
     max_mismatches: int = 2,
 ):
-    hits = []
+    """
+    같은 orientation / start / end 위치에 대해
+    가장 mismatch가 적은 hit만 남긴다.
+    """
     n = len(seq)
+    best_hits_by_site = {}
 
     for pv in primer_variants:
         L = len(pv)
@@ -336,35 +340,44 @@ def find_all_matches_in_seq(
                     mm += 1
 
             if mm <= max_mismatches:
-                hits.append({
+                site_key = (
+                    orientation_label,
+                    start + 1,
+                    start + L,
+                )
+
+                candidate = {
                     "orientation": orientation_label,
                     "start_1b": start + 1,
                     "end_1b": start + L,
                     "mismatches": mm,
                     "primer_used": pv,
                     "matched_seq": window,
-                })
+                }
 
-    unique_hits = []
-    seen = set()
-    for h in hits:
-        key = (
-            h["orientation"],
-            h["start_1b"],
-            h["end_1b"],
-            h["matched_seq"]
-        )
-        if key not in seen:
-            seen.add(key)
-            unique_hits.append(h)
+                if site_key not in best_hits_by_site:
+                    best_hits_by_site[site_key] = candidate
+                else:
+                    prev = best_hits_by_site[site_key]
+
+                    # mismatch가 더 적은 hit를 우선
+                    if candidate["mismatches"] < prev["mismatches"]:
+                        best_hits_by_site[site_key] = candidate
+                    # mismatch가 같으면 primer_used까지 같거나 더 보기 좋은(완전일치 우선) hit를 유지
+                    elif candidate["mismatches"] == prev["mismatches"]:
+                        # 완전일치 여부를 먼저 비교
+                        cand_exact = int(candidate["primer_used"] == candidate["matched_seq"])
+                        prev_exact = int(prev["primer_used"] == prev["matched_seq"])
+
+                        if cand_exact > prev_exact:
+                            best_hits_by_site[site_key] = candidate
 
     unique_hits = sorted(
-        unique_hits,
+        best_hits_by_site.values(),
         key=lambda x: (x["mismatches"], x["start_1b"])
     )
 
     return unique_hits
-
 
 def find_multi_sites_for_primer(
     seq: str,
