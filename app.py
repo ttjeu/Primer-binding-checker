@@ -543,6 +543,18 @@ if run:
         order_summary_df = pd.concat([b["summary_df"] for b in blocks], ignore_index=True)
         order_detail_df = pd.concat([b["detail_df"] for b in blocks], ignore_index=True)
 
+        order_summary_df = order_summary_df.reindex(columns=[
+            "order_no", "sample_name", "read_label",
+            "primer", "hit_count", "multi_possible", "sites"
+        ])
+
+        order_detail_df = order_detail_df.reindex(columns=[
+            "order_no", "sample_name", "read_label",
+            "primer", "hit_no", "orientation",
+            "start_1b", "end_1b", "mismatches",
+            "primer_used", "matched_seq"
+        ])
+
         order_summary_df = order_summary_df.sort_values(
             by=["sample_name", "read_label", "primer"]
         ).reset_index(drop=True)
